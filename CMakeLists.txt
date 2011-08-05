@@ -24,6 +24,10 @@ endif(ALPINOCORPUS_FOUND)
 find_package(Qt4 COMPONENTS QtCore QtGui QtMain QtNetwork REQUIRED)
 INCLUDE(${QT_USE_FILE})
 
+set(merge_HDRS
+  include/MainWindow.hh
+)
+
 set(merge_SRCS
   src/MainWindow.cpp
   src/main.cpp
