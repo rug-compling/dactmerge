@@ -26,6 +26,7 @@ signals:
 private slots:
     void addDirectory();
     void cancelSaveCorpus();
+    void corpusSaved();
     void doSaveToCorpus(QString filename, QList<QPair<QString, QString> > corpora);
     
     void saveToCorpus();

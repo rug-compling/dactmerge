@@ -58,6 +58,11 @@ void MainWindow::cancelSaveCorpus()
     d_saveCorpusCancelled = true;
 }
 
+void MainWindow::corpusSaved()
+{
+    d_saveProgressDialog->accept();
+}
+
 void MainWindow::setupConnections()
 {
     connect(d_ui->addDirectoryAction, SIGNAL(activated()),
@@ -66,7 +71,8 @@ void MainWindow::setupConnections()
             SLOT(saveToCorpus()));
     connect(this, SIGNAL(saveProgress(int)), d_saveProgressDialog, SLOT(setValue(int)));
     connect(this, SIGNAL(saveProgressMaximum(int)), d_saveProgressDialog, SLOT(setMaximum(int)));
-    connect(d_saveProgressDialog, SIGNAL(canceled()), this, SLOT(cancelSaveCorpus()));
+    connect(d_saveProgressDialog, SIGNAL(canceled()), SLOT(cancelSaveCorpus()));
+    connect(&d_saveWatcher, SIGNAL(resultReadyAt(int)), SLOT(corpusSaved()));
 }
 
 void MainWindow::saveToCorpus()
