@@ -72,7 +72,7 @@ void MainWindow::setupConnections()
     connect(this, SIGNAL(saveProgress(int)), d_saveProgressDialog, SLOT(setValue(int)));
     connect(this, SIGNAL(saveProgressMaximum(int)), d_saveProgressDialog, SLOT(setMaximum(int)));
     connect(d_saveProgressDialog, SIGNAL(canceled()), SLOT(cancelSaveCorpus()));
-    connect(&d_saveWatcher, SIGNAL(resultReadyAt(int)), SLOT(corpusSaved()));
+    connect(&d_saveWatcher, SIGNAL(finished()), SLOT(corpusSaved()));
 }
 
 void MainWindow::saveToCorpus()
@@ -109,11 +109,23 @@ void MainWindow::saveToCorpus()
 
 void MainWindow::doSaveToCorpus(QString filename, QList<QPair<QString, QString> > corpora)
 {
-    emit saveProgressMaximum(corpora.size());
     emit saveProgress(0);
         
     ac::DbCorpusWriter writer(filename.toUtf8().constData(), true);
+
+    size_t nEntries = 0;
+    for (int i = 0; i < corpora.size(); ++i) {
+        QString corpus(corpora.at(i).first);
+        QScopedPointer<ac::CorpusReader> reader(
+            ac::CorpusReader::open(corpus.toUtf8().constData()));
+        nEntries += reader->size();
+    }
     
+    int percent = nEntries / 100;
+    
+    emit saveProgressMaximum(nEntries);
+
+    size_t entriesProcessed = 0;
     for (int i = 0; i < corpora.size(); ++i) {
         QString corpus(corpora.at(i).first);
         QString dir(corpora.at(i).second);
@@ -129,18 +141,29 @@ void MainWindow::doSaveToCorpus(QString filename, QList<QPair<QString, QString> 
             basePath.remove(basePath.size() - 5, 5);
         
         QScopedPointer<ac::CorpusReader> reader(
-                                                ac::CorpusReader::open(corpus.toUtf8().constData()));
+            ac::CorpusReader::open(corpus.toUtf8().constData()));
         for (ac::CorpusReader::EntryIterator entryIter = reader->begin();
              entryIter != reader->end(); ++entryIter)
         {
             QString entry = QString("%1/%2").arg(basePath).arg(QString::fromUtf8((*entryIter).c_str()));
-            writer.write(entry.toUtf8().constData(), reader->read(*entryIter));
+            
+            try {
+                writer.write(entry.toUtf8().constData(), reader->read(*entryIter));
+            } catch (std::exception &e) {
+                qDebug() << e.what();
+            }
+            
+            ++entriesProcessed;
+            
+            if (d_saveCorpusCancelled)
+                break;        
+
+            if (percent == 0 || entriesProcessed % percent == 0)
+                emit saveProgress(entriesProcessed);
         }
         
         if (d_saveCorpusCancelled)
             break;
-        
-        emit saveProgress(i + 1);
     }    
 }
 
